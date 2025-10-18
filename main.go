@@ -38,7 +38,7 @@ func main() {
 		admin.GET("/check-setup", apiHandler.CheckSetup)
 		admin.POST("/setup", apiHandler.Setup)
 		admin.POST("/login", apiHandler.Login)
-		
+
 		// 需要认证的路由（简化版，实际应该使用中间件）
 		admin.GET("/cookies", apiHandler.ListCookies)
 		admin.POST("/cookies", apiHandler.AddCookie)
@@ -66,11 +66,11 @@ func main() {
 	})
 
 	// 启动服务器
-	log.Println("服务器启动在 http://localhost:8000")
-	log.Println("管理页面: http://localhost:8000/admin")
-	log.Println("API端点: http://localhost:8000/v1/chat/completions")
-	
-	if err := r.Run(":8000"); err != nil {
+	log.Println("服务器启动在 http://localhost:8011")
+	log.Println("管理页面: http://localhost:8011/admin")
+	log.Println("API端点: http://localhost:8011/v1/chat/completions")
+
+	if err := r.Run(":8011"); err != nil {
 		log.Fatal(err)
 	}
 }
