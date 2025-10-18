@@ -17,6 +17,16 @@ type CookieInfo struct {
 	ErrorCount   int       `json:"error_count"`   // 错误次数
 	LastUsedAt   time.Time `json:"last_used_at"`  // 最近使用时间
 	CreatedAt    time.Time `json:"created_at"`    // 创建时间
+	Usage        *UsageInfo `json:"usage,omitempty"` // 用量信息（不保存到文件）
+}
+
+// UsageInfo 用量信息（临时数据，不保存）
+type UsageInfo struct {
+	TaskCreditsUsage     int    `json:"task_credits_usage"`
+	TaskCreditsLimit     int    `json:"task_credits_limit"`
+	TaskConcurrencyUsage int    `json:"task_concurrency_usage"`
+	TaskConcurrencyLimit int    `json:"task_concurrency_limit"`
+	LastUpdate           string `json:"last_update"`
 }
 
 // AppData 应用数据（包含密码、API密钥和所有cookie）

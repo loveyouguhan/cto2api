@@ -263,3 +263,56 @@ func (c *CTOClient) GetFullResponse(chatID, wsUserToken string) (string, error) 
 
 	return fullResponse, nil
 }
+
+// BillingInfo 用量信息
+type BillingInfo struct {
+	Active                        bool    `json:"active"`
+	CurrentBillingTier            int     `json:"currentBillingTier"`
+	TaskCreditsPeriod             string  `json:"taskCreditsPeriod"`
+	TaskCreditsLimit              int     `json:"taskCreditsLimit"`
+	TaskCreditsUsage              int     `json:"taskCreditsUsage"`
+	TaskCreditsNonExpiringBalance int     `json:"taskCreditsNonExpiringBalance"`
+	TaskConcurrencyLimit          int     `json:"taskConcurrencyLimit"`
+	TaskConcurrencyUsage          int     `json:"taskConcurrencyUsage"`
+	StartDate                     string  `json:"startDate"`
+	Seats                         int     `json:"seats"`
+	IsAnnualPlan                  bool    `json:"isAnnualPlan"`
+	BillingPeriod                 *string `json:"billingPeriod"`
+	PendingPlanChanges            *string `json:"pendingPlanChanges"`
+	TotalPlanCost                 *string `json:"totalPlanCost"`
+	NextInvoiceAmount             *string `json:"nextInvoiceAmount"`
+}
+
+// GetBillingInfo 获取用量信息
+func (c *CTOClient) GetBillingInfo(jwt string) (*BillingInfo, error) {
+	url := "https://api.enginelabs.ai/billing"
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+jwt)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Origin", "https://cto.new")
+	req.Header.Set("Referer", "https://cto.new")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("获取用量信息失败: HTTP %d, 响应: %s", resp.StatusCode, string(body))
+	}
+
+	var billing BillingInfo
+	if err := json.NewDecoder(resp.Body).Decode(&billing); err != nil {
+		return nil, err
+	}
+
+	return &billing, nil
+}

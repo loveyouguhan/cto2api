@@ -14,12 +14,16 @@ import (
 
 // APIHandler API处理器
 type APIHandler struct {
-	store *models.DataStore
+	store        *models.DataStore
+	usageManager *services.UsageManager
 }
 
 // NewAPIHandler 创建API处理器
 func NewAPIHandler(store *models.DataStore) *APIHandler {
-	return &APIHandler{store: store}
+	return &APIHandler{
+		store:        store,
+		usageManager: services.NewUsageManager(),
+	}
 }
 
 // Message 消息结构
@@ -460,10 +464,47 @@ func (h *APIHandler) DeleteCookie(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
 }
 
-// ListCookies 列出所有Cookie
+// ListCookies 列出所有Cookie（带用量信息）
 func (h *APIHandler) ListCookies(c *gin.Context) {
 	cookies := h.store.ListCookies()
+	
+	// 异步获取每个Cookie的用量信息
+	for _, cookie := range cookies {
+		if cookie.Enabled {
+			go h.fetchCookieUsage(cookie)
+		}
+	}
+	
 	c.JSON(http.StatusOK, cookies)
+}
+
+// fetchCookieUsage 异步获取Cookie用量信息
+func (h *APIHandler) fetchCookieUsage(cookie *models.CookieInfo) {
+	client := services.NewCTOClient(cookie.Cookie)
+	
+	clerkInfo, err := client.GetClerkInfo()
+	if err != nil {
+		return
+	}
+	
+	jwt, err := client.GetJWT(clerkInfo.SessionID)
+	if err != nil {
+		return
+	}
+	
+	billing, err := h.usageManager.GetBillingInfo(client, jwt)
+	if err != nil {
+		return
+	}
+	
+	// 更新Cookie的用量信息（不保存到文件）
+	cookie.Usage = &models.UsageInfo{
+		TaskCreditsUsage:     billing.TaskCreditsUsage,
+		TaskCreditsLimit:     billing.TaskCreditsLimit,
+		TaskConcurrencyUsage: billing.TaskConcurrencyUsage,
+		TaskConcurrencyLimit: billing.TaskConcurrencyLimit,
+		LastUpdate:           time.Now().Format("2006-01-02 15:04:05"),
+	}
 }
 
 // TestCookie 测试Cookie连通性
@@ -513,6 +554,97 @@ func (h *APIHandler) TestCookie(c *gin.Context) {
 		"success": false,
 		"message": "Cookie可能已失效",
 	})
+}
+
+// GetUsage 获取用量信息（总览）
+func (h *APIHandler) GetUsage(c *gin.Context) {
+	// 获取任意一个可用的Cookie来获取用量信息
+	cookieInfo := h.store.GetNextCookie()
+	if cookieInfo == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "没有可用的Cookie，无法获取用量信息",
+		})
+		return
+	}
+
+	// 创建CTO客户端
+	client := services.NewCTOClient(cookieInfo.Cookie)
+
+	// 获取认证信息
+	clerkInfo, err := client.GetClerkInfo()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "获取认证信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	jwt, err := client.GetJWT(clerkInfo.SessionID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "获取JWT失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 使用缓存机制获取用量信息
+	billing, err := h.usageManager.GetBillingInfo(client, jwt)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "获取用量信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 异步刷新（如果缓存快过期）
+	if h.usageManager.IsStale() {
+		go h.usageManager.RefreshAsync(client, jwt)
+	}
+
+	c.JSON(http.StatusOK, billing)
+}
+
+// GetCookieUsage 获取指定Cookie的用量信息
+func (h *APIHandler) GetCookieUsage(c *gin.Context) {
+	id := c.Param("id")
+	
+	// 获取Cookie信息
+	cookieInfo := h.store.GetCookie(id)
+	if cookieInfo == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cookie不存在"})
+		return
+	}
+
+	// 创建CTO客户端
+	client := services.NewCTOClient(cookieInfo.Cookie)
+
+	// 获取认证信息
+	clerkInfo, err := client.GetClerkInfo()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "获取认证信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	jwt, err := client.GetJWT(clerkInfo.SessionID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "获取JWT失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 获取用量信息
+	billing, err := client.GetBillingInfo(jwt)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": "获取用量信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, billing)
 }
 
 func stringPtr(s string) *string {

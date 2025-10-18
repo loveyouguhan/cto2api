@@ -284,6 +284,31 @@
 
         <!-- 主管理页面 -->
         <div id="mainPage" class="hidden">
+            <!-- 用量信息 -->
+            <div class="card">
+                <h2>用量信息</h2>
+                <div id="usageInfo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <div class="stat-item" style="padding: 20px;">
+                        <div class="stat-label">今日使用</div>
+                        <div class="stat-value" id="usageCount">-</div>
+                    </div>
+                    <div class="stat-item" style="padding: 20px;">
+                        <div class="stat-label">今日限额</div>
+                        <div class="stat-value" id="usageLimit">-</div>
+                    </div>
+                    <div class="stat-item" style="padding: 20px;">
+                        <div class="stat-label">剩余额度</div>
+                        <div class="stat-value" id="usageRemaining" style="color: #27ae60;">-</div>
+                    </div>
+                    <div class="stat-item" style="padding: 20px;">
+                        <div class="stat-label">并发限制</div>
+                        <div class="stat-value" id="concurrencyLimit">-</div>
+                    </div>
+                </div>
+                <p id="usageError" style="color: #e74c3c; margin-top: 15px; display: none;"></p>
+                <p style="color: #888; font-size: 12px; margin-top: 15px;">数据每5分钟自动更新一次</p>
+            </div>
+
             <!-- API密钥管理 -->
             <div class="card">
                 <h2>API密钥管理</h2>
@@ -406,8 +431,47 @@
         // 加载主页面
         async function loadMainPage() {
             document.getElementById('mainPage').classList.remove('hidden');
+            await loadUsage();
             await loadApiKey();
             await loadCookies();
+        }
+
+        // 加载用量信息
+        async function loadUsage() {
+            try {
+                const response = await fetch('/api/admin/usage');
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('usageError').textContent = data.error;
+                    document.getElementById('usageError').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('usageError').style.display = 'none';
+                document.getElementById('usageCount').textContent = data.taskCreditsUsage || 0;
+                document.getElementById('usageLimit').textContent = data.taskCreditsLimit || 0;
+                
+                const remaining = (data.taskCreditsLimit || 0) - (data.taskCreditsUsage || 0);
+                const remainingEl = document.getElementById('usageRemaining');
+                remainingEl.textContent = remaining;
+                
+                // 根据剩余额度设置颜色
+                if (remaining < 50) {
+                    remainingEl.style.color = '#e74c3c';
+                } else if (remaining < 100) {
+                    remainingEl.style.color = '#f39c12';
+                } else {
+                    remainingEl.style.color = '#27ae60';
+                }
+                
+                document.getElementById('concurrencyLimit').textContent =
+                    `${data.taskConcurrencyUsage || 0}/${data.taskConcurrencyLimit || 0}`;
+            } catch (error) {
+                console.error('加载用量信息失败:', error);
+                document.getElementById('usageError').textContent = '加载用量信息失败: ' + error.message;
+                document.getElementById('usageError').style.display = 'block';
+            }
         }
 
         // 加载API密钥
@@ -500,6 +564,43 @@
                 cookies.forEach(cookie => {
                     const item = document.createElement('div');
                     item.className = 'cookie-item' + (cookie.enabled ? '' : ' disabled');
+                    
+                    // 用量信息HTML
+                    let usageHTML = '';
+                    if (cookie.usage) {
+                        const remaining = cookie.usage.task_credits_limit - cookie.usage.task_credits_usage;
+                        const usagePercent = (cookie.usage.task_credits_usage / cookie.usage.task_credits_limit * 100).toFixed(1);
+                        usageHTML = `
+                            <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 11px; color: #888;">今日使用</div>
+                                        <div style="font-size: 16px; font-weight: 600; color: #667eea;">${cookie.usage.task_credits_usage}</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 11px; color: #888;">今日限额</div>
+                                        <div style="font-size: 16px; font-weight: 600; color: #667eea;">${cookie.usage.task_credits_limit}</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 11px; color: #888;">剩余</div>
+                                        <div style="font-size: 16px; font-weight: 600; color: ${remaining < 50 ? '#e74c3c' : remaining < 100 ? '#f39c12' : '#27ae60'};">${remaining}</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 11px; color: #888;">使用率</div>
+                                        <div style="font-size: 16px; font-weight: 600; color: ${usagePercent > 80 ? '#e74c3c' : usagePercent > 60 ? '#f39c12' : '#27ae60'};">${usagePercent}%</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #999; margin-top: 8px; text-align: center;">更新时间: ${cookie.usage.last_update}</div>
+                            </div>
+                        `;
+                    } else if (cookie.enabled) {
+                        usageHTML = `
+                            <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin: 15px 0; text-align: center;">
+                                <span style="color: #888; font-size: 12px;">正在加载用量信息...</span>
+                            </div>
+                        `;
+                    }
+                    
                     item.innerHTML = `
                         <div class="cookie-header">
                             <div class="cookie-name">${cookie.name}</div>
@@ -521,6 +622,7 @@
                                 <div class="stat-value" style="font-size: 12px;">${formatTime(cookie.last_used_at)}</div>
                             </div>
                         </div>
+                        ${usageHTML}
                         <div class="cookie-actions">
                             <button class="success" onclick="testCookie('${cookie.id}')">测试</button>
                             <button class="secondary" onclick="toggleCookie('${cookie.id}', ${!cookie.enabled})">
