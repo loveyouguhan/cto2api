@@ -66,11 +66,11 @@ func main() {
 	})
 
 	// 启动服务器
-	log.Println("服务器启动在 http://localhost:8011")
-	log.Println("管理页面: http://localhost:8011/admin")
-	log.Println("API端点: http://localhost:8011/v1/chat/completions")
+	log.Println("服务器启动在 http://localhost:7032")
+	log.Println("管理页面: http://localhost:7032/admin")
+	log.Println("API端点: http://localhost:7032/v1/chat/completions")
 
-	if err := r.Run(":8011"); err != nil {
+	if err := r.Run(":7032"); err != nil {
 		log.Fatal(err)
 	}
 }
