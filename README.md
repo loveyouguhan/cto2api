@@ -1,6 +1,6 @@
 # CTO2API - Go版本
 
-将CTO.NEW的AI服务转换为OpenAI兼容的API接口，使用Go语言重写，提供Web管理界面。
+将CTO.NEW的AI服务转换为OpenAI兼容的API接口，提供Web管理界面。
 
 ## 功能特点
 

@@ -145,6 +145,7 @@ func (c *CTOClient) CreateChat(jwt, prompt, adapter, chatID string) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", "https://cto.new")
 	req.Header.Set("Referer", "https://cto.new")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -152,9 +153,11 @@ func (c *CTOClient) CreateChat(jwt, prompt, adapter, chatID string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("创建聊天失败: %d, %s", resp.StatusCode, string(body))
+	body, _ := io.ReadAll(resp.Body)
+	
+	// 接受200和202状态码
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("创建聊天失败: HTTP %d, 响应: %s", resp.StatusCode, string(body))
 	}
 
 	return nil
@@ -173,19 +176,39 @@ func (c *CTOClient) StreamChat(chatID, wsUserToken string, responseChan chan<- S
 
 	wsURL := fmt.Sprintf("wss://api.enginelabs.ai/engine-agent/chat-histories/%s/buffer/stream?token=%s", chatID, wsUserToken)
 	
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	// 添加请求头
+	headers := http.Header{}
+	headers.Set("Origin", "https://cto.new")
+	headers.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 30 * time.Second,
+	}
+	
+	conn, _, err := dialer.Dial(wsURL, headers)
 	if err != nil {
-		responseChan <- StreamResponse{Error: err}
+		responseChan <- StreamResponse{Error: fmt.Errorf("WebSocket连接失败: %v", err)}
 		return
 	}
 	defer conn.Close()
 
+	// 设置读取超时
+	conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
+
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			responseChan <- StreamResponse{Error: err}
+			// 如果是正常关闭，不报错
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				responseChan <- StreamResponse{Done: true}
+				return
+			}
+			responseChan <- StreamResponse{Error: fmt.Errorf("读取WebSocket消息失败: %v", err)}
 			return
 		}
+
+		// 重置读取超时
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 
 		var data map[string]interface{}
 		if err := json.Unmarshal(message, &data); err != nil {

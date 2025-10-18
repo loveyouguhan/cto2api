@@ -44,6 +44,7 @@ func main() {
 		admin.POST("/cookies", apiHandler.AddCookie)
 		admin.PUT("/cookies/:id", apiHandler.UpdateCookie)
 		admin.DELETE("/cookies/:id", apiHandler.DeleteCookie)
+		admin.POST("/cookies/:id/test", apiHandler.TestCookie)
 		admin.GET("/api-key", apiHandler.GetAPIKey)
 		admin.PUT("/api-key", apiHandler.UpdateAPIKey)
 	}

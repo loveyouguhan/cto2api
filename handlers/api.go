@@ -466,6 +466,55 @@ func (h *APIHandler) ListCookies(c *gin.Context) {
 	c.JSON(http.StatusOK, cookies)
 }
 
+// TestCookie 测试Cookie连通性
+func (h *APIHandler) TestCookie(c *gin.Context) {
+	id := c.Param("id")
+	
+	// 获取Cookie信息
+	cookieInfo := h.store.GetCookie(id)
+	if cookieInfo == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cookie不存在"})
+		return
+	}
+
+	// 创建CTO客户端
+	client := services.NewCTOClient(cookieInfo.Cookie)
+
+	// 测试获取认证信息
+	clerkInfo, err := client.GetClerkInfo()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取认证信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 测试获取JWT
+	jwt, err := client.GetJWT(clerkInfo.SessionID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取JWT失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 如果能获取到JWT，说明Cookie有效
+	if jwt != "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Cookie有效，连接正常",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": false,
+		"message": "Cookie可能已失效",
+	})
+}
+
 func stringPtr(s string) *string {
 	return &s
 }

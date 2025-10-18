@@ -120,6 +120,14 @@
             background: #7f8c8d;
         }
 
+        button.success {
+            background: #27ae60;
+        }
+
+        button.success:hover {
+            background: #229954;
+        }
+
         .cookie-list {
             margin-top: 20px;
         }
@@ -514,6 +522,7 @@
                             </div>
                         </div>
                         <div class="cookie-actions">
+                            <button class="success" onclick="testCookie('${cookie.id}')">测试</button>
                             <button class="secondary" onclick="toggleCookie('${cookie.id}', ${!cookie.enabled})">
                                 ${cookie.enabled ? '禁用' : '启用'}
                             </button>
@@ -545,6 +554,33 @@
                 }
             } catch (error) {
                 showError('操作失败: ' + error.message);
+            }
+        }
+
+        // 测试Cookie
+        async function testCookie(id) {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = '测试中...';
+
+            try {
+                const response = await fetch(`/api/admin/cookies/${id}/test`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showSuccess('✓ ' + data.message);
+                } else {
+                    showError('✗ ' + data.message);
+                }
+            } catch (error) {
+                showError('测试失败: ' + error.message);
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
             }
         }
 
