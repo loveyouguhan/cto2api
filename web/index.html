@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTO2API 管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-size: 24px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button.danger {
+            background: #e74c3c;
+        }
+
+        button.danger:hover {
+            background: #c0392b;
+        }
+
+        button.secondary {
+            background: #95a5a6;
+        }
+
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .cookie-list {
+            margin-top: 20px;
+        }
+
+        .cookie-item {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .cookie-item:hover {
+            border-color: #667eea;
+        }
+
+        .cookie-item.disabled {
+            opacity: 0.6;
+            background: #f0f0f0;
+        }
+
+        .cookie-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .cookie-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .cookie-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .cookie-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .cookie-actions button {
+            flex: 1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .api-key-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .cookie-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .cookie-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CTO2API 管理面板</h1>
+
+        <!-- 初始设置页面 -->
+        <div id="setupPage" class="card hidden">
+            <h2>初始设置</h2>
+            <p style="color: #666; margin-bottom: 20px;">首次使用需要设置管理密码和API密钥</p>
+            <div class="form-group">
+                <label>管理密码</label>
+                <input type="password" id="setupPassword" placeholder="设置管理密码">
+            </div>
+            <div class="form-group">
+                <label>API密钥</label>
+                <input type="text" id="setupApiKey" placeholder="设置OpenAI API密钥（用于调用接口）">
+                <small style="color: #888;">此密钥将用于验证API请求</small>
+            </div>
+            <button onclick="handleSetup()">完成设置</button>
+        </div>
+
+        <!-- 登录页面 -->
+        <div id="loginPage" class="card hidden">
+            <h2>登录</h2>
+            <div class="form-group">
+                <label>管理密码</label>
+                <input type="password" id="loginPassword" placeholder="输入管理密码">
+            </div>
+            <button onclick="handleLogin()">登录</button>
+        </div>
+
+        <!-- 主管理页面 -->
+        <div id="mainPage" class="hidden">
+            <!-- API密钥管理 -->
+            <div class="card">
+                <h2>API密钥管理</h2>
+                <div id="apiKeyDisplay" class="api-key-display"></div>
+                <div class="form-group">
+                    <label>更新API密钥</label>
+                    <input type="text" id="newApiKey" placeholder="输入新的API密钥">
+                </div>
+                <button onclick="updateApiKey()">更新密钥</button>
+            </div>
+
+            <!-- Cookie管理 -->
+            <div class="card">
+                <h2>Cookie管理</h2>
+                <div class="form-group">
+                    <label>Cookie名称</label>
+                    <input type="text" id="cookieName" placeholder="例如：账号1">
+                </div>
+                <div class="form-group">
+                    <label>Cookie内容</label>
+                    <textarea id="cookieContent" placeholder="粘贴完整的Cookie字符串（以__client=开头）"></textarea>
+                </div>
+                <button onclick="addCookie()">添加Cookie</button>
+
+                <div id="cookieList" class="cookie-list"></div>
+            </div>
+        </div>
+
+        <!-- 加载提示 -->
+        <div id="loading" class="card loading">
+            <p>加载中...</p>
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('authToken');
+
+        // 初始化
+        async function init() {
+            try {
+                const response = await fetch('/api/admin/check-setup');
+                const data = await response.json();
+
+                document.getElementById('loading').classList.add('hidden');
+
+                if (!data.setup_completed) {
+                    document.getElementById('setupPage').classList.remove('hidden');
+                } else if (!authToken) {
+                    document.getElementById('loginPage').classList.remove('hidden');
+                } else {
+                    await loadMainPage();
+                }
+            } catch (error) {
+                showError('初始化失败: ' + error.message);
+            }
+        }
+
+        // 处理初始设置
+        async function handleSetup() {
+            const password = document.getElementById('setupPassword').value;
+            const apiKey = document.getElementById('setupApiKey').value;
+
+            if (!password || !apiKey) {
+                showError('请填写所有字段');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password, api_key: apiKey })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('设置成功！请登录');
+                    document.getElementById('setupPage').classList.add('hidden');
+                    document.getElementById('loginPage').classList.remove('hidden');
+                } else {
+                    showError(data.error || '设置失败');
+                }
+            } catch (error) {
+                showError('设置失败: ' + error.message);
+            }
+        }
+
+        // 处理登录
+        async function handleLogin() {
+            const password = document.getElementById('loginPassword').value;
+
+            if (!password) {
+                showError('请输入密码');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    document.getElementById('loginPage').classList.add('hidden');
+                    await loadMainPage();
+                } else {
+                    showError(data.error || '登录失败');
+                }
+            } catch (error) {
+                showError('登录失败: ' + error.message);
+            }
+        }
+
+        // 加载主页面
+        async function loadMainPage() {
+            document.getElementById('mainPage').classList.remove('hidden');
+            await loadApiKey();
+            await loadCookies();
+        }
+
+        // 加载API密钥
+        async function loadApiKey() {
+            try {
+                const response = await fetch('/api/admin/api-key');
+                const data = await response.json();
+                document.getElementById('apiKeyDisplay').textContent = data.api_key || '未设置';
+            } catch (error) {
+                console.error('加载API密钥失败:', error);
+            }
+        }
+
+        // 更新API密钥
+        async function updateApiKey() {
+            const apiKey = document.getElementById('newApiKey').value;
+
+            if (!apiKey) {
+                showError('请输入API密钥');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/api-key', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('API密钥更新成功');
+                    document.getElementById('newApiKey').value = '';
+                    await loadApiKey();
+                } else {
+                    showError(data.error || '更新失败');
+                }
+            } catch (error) {
+                showError('更新失败: ' + error.message);
+            }
+        }
+
+        // 添加Cookie
+        async function addCookie() {
+            const name = document.getElementById('cookieName').value;
+            const cookie = document.getElementById('cookieContent').value;
+
+            if (!name || !cookie) {
+                showError('请填写所有字段');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/cookies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, cookie })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Cookie添加成功');
+                    document.getElementById('cookieName').value = '';
+                    document.getElementById('cookieContent').value = '';
+                    await loadCookies();
+                } else {
+                    showError(data.error || '添加失败');
+                }
+            } catch (error) {
+                showError('添加失败: ' + error.message);
+            }
+        }
+
+        // 加载Cookie列表
+        async function loadCookies() {
+            try {
+                const response = await fetch('/api/admin/cookies');
+                const cookies = await response.json();
+
+                const listEl = document.getElementById('cookieList');
+                listEl.innerHTML = '';
+
+                if (cookies.length === 0) {
+                    listEl.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">暂无Cookie</p>';
+                    return;
+                }
+
+                cookies.forEach(cookie => {
+                    const item = document.createElement('div');
+                    item.className = 'cookie-item' + (cookie.enabled ? '' : ' disabled');
+                    item.innerHTML = `
+                        <div class="cookie-header">
+                            <div class="cookie-name">${cookie.name}</div>
+                            <span style="color: ${cookie.enabled ? '#27ae60' : '#e74c3c'}">
+                                ${cookie.enabled ? '✓ 启用' : '✗ 禁用'}
+                            </span>
+                        </div>
+                        <div class="cookie-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">请求次数</div>
+                                <div class="stat-value">${cookie.request_count || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">错误次数</div>
+                                <div class="stat-value" style="color: ${cookie.error_count > 0 ? '#e74c3c' : '#27ae60'}">${cookie.error_count || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">最近使用</div>
+                                <div class="stat-value" style="font-size: 12px;">${formatTime(cookie.last_used_at)}</div>
+                            </div>
+                        </div>
+                        <div class="cookie-actions">
+                            <button class="secondary" onclick="toggleCookie('${cookie.id}', ${!cookie.enabled})">
+                                ${cookie.enabled ? '禁用' : '启用'}
+                            </button>
+                            <button class="danger" onclick="deleteCookie('${cookie.id}')">删除</button>
+                        </div>
+                    `;
+                    listEl.appendChild(item);
+                });
+            } catch (error) {
+                showError('加载Cookie列表失败: ' + error.message);
+            }
+        }
+
+        // 切换Cookie状态
+        async function toggleCookie(id, enabled) {
+            try {
+                const response = await fetch(`/api/admin/cookies/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+
+                if (response.ok) {
+                    showSuccess(enabled ? 'Cookie已启用' : 'Cookie已禁用');
+                    await loadCookies();
+                } else {
+                    const data = await response.json();
+                    showError(data.error || '操作失败');
+                }
+            } catch (error) {
+                showError('操作失败: ' + error.message);
+            }
+        }
+
+        // 删除Cookie
+        async function deleteCookie(id) {
+            if (!confirm('确定要删除这个Cookie吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/cookies/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showSuccess('Cookie已删除');
+                    await loadCookies();
+                } else {
+                    const data = await response.json();
+                    showError(data.error || '删除失败');
+                }
+            } catch (error) {
+                showError('删除失败: ' + error.message);
+            }
+        }
+
+        // 格式化时间
+        function formatTime(timeStr) {
+            if (!timeStr || timeStr === '0001-01-01T00:00:00Z') {
+                return '从未';
+            }
+            const date = new Date(timeStr);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}天前`;
+            if (hours > 0) return `${hours}小时前`;
+            if (minutes > 0) return `${minutes}分钟前`;
+            return '刚刚';
+        }
+
+        // 显示成功消息
+        function showSuccess(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success';
+            alert.textContent = message;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.container').firstChild);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-error';
+            alert.textContent = message;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.container').firstChild);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        // 页面加载时初始化
+        init();
+    </script>
+</body>
+</html>

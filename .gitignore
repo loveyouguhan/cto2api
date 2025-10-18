@@ -1,0 +1,34 @@
+# 二进制文件
+cto2api
+cto2api.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 数据文件
+data.json
+config.json
+
+# Go相关
+*.test
+*.out
+go.work
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 临时文件
+tmp/
+temp/
