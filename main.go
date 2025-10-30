@@ -1,12 +1,15 @@
 package main
 
 import (
+	"cto2api/config"
 	"cto2api/handlers"
 	"cto2api/models"
 	"embed"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -67,12 +70,41 @@ func main() {
 		})
 	})
 
-	// 启动服务器
-	log.Println("服务器启动在 http://localhost:7032")
-	log.Println("管理页面: http://localhost:7032/admin")
-	log.Println("API端点: http://localhost:7032/v1/chat/completions")
+	// 加载配置
+	cfg := config.Load()
 
-	if err := r.Run(":7032"); err != nil {
+	// 获取服务器URL（用于日志显示）
+	serverURL := getServerURL(cfg.Port)
+
+	// 启动服务器
+	log.Println("============================================================")
+	log.Printf("服务器启动在 %s", serverURL)
+	log.Printf("管理页面: %s/admin", serverURL)
+	log.Printf("API端点: %s/v1/chat/completions", serverURL)
+	log.Println("============================================================")
+
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// getServerURL 获取服务器URL用于日志显示
+func getServerURL(port int) string {
+	// 优先使用 Zeabur 提供的域名
+	if zeaburURL := os.Getenv("ZEABUR_URL"); zeaburURL != "" {
+		return "https://" + zeaburURL
+	}
+
+	// 其他云平台的域名环境变量
+	if renderURL := os.Getenv("RENDER_EXTERNAL_URL"); renderURL != "" {
+		return renderURL
+	}
+
+	if railwayURL := os.Getenv("RAILWAY_STATIC_URL"); railwayURL != "" {
+		return "https://" + railwayURL
+	}
+
+	// 默认使用本地地址
+	return fmt.Sprintf("http://127.0.0.1:%d", port)
 }
